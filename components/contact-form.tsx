@@ -15,10 +15,24 @@ const fields = [
 
 export function ContactForm() {
   const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setSent(true)
+    setSending(true)
+    setError('')
+    const form = new FormData(e.currentTarget)
+    try {
+      const response = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(form)) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error)
+      setSent(true)
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'We could not send your message.')
+    } finally {
+      setSending(false)
+    }
   }
 
   if (sent) {
@@ -49,6 +63,7 @@ export function ContactForm() {
       className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8"
     >
       <div className="grid gap-5 sm:grid-cols-2">
+        <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
         {fields.map((f) => (
           <div key={f.name} className={cn(f.full && 'sm:col-span-2')}>
             <label htmlFor={f.name} className="mb-1.5 block text-sm font-semibold text-foreground">
@@ -78,8 +93,9 @@ export function ContactForm() {
           />
         </div>
       </div>
-      <Button type="submit" className="mt-6 h-12 w-full gap-2 text-base shadow-lg shadow-primary/25">
-        Send Message
+      {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
+      <Button type="submit" disabled={sending} className="mt-6 h-12 w-full gap-2 text-base shadow-lg shadow-primary/25">
+        {sending ? 'Sending…' : 'Send Message'}
         <Send className="size-4" />
       </Button>
     </form>
